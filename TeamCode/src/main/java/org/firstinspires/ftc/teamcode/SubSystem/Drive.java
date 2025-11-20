@@ -14,7 +14,6 @@ public class Drive {
     private double velocityScale = 2000.0;
     private double targetFL, targetFR, targetBL, targetBR;
 
-    // Adjust this constant based on your wheel diameter and encoder ticks per revolution
     private static final double TICKS_PER_INCH = 45.0; // placeholder value
 
     public Drive(HardwareMap hardwareMap) {
@@ -32,21 +31,27 @@ public class Drive {
         backLeft.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, drivePIDF);
         backRight.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, drivePIDF);
 
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        BNO055IMU.Parameters params = new BNO055IMU.Parameters();
-        params.mode = BNO055IMU.SensorMode.IMU;
-        params.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        imu.initialize(params);
+        try {
+            imu = hardwareMap.get(BNO055IMU.class, "imu");
+            BNO055IMU.Parameters params = new BNO055IMU.Parameters();
+            params.mode = BNO055IMU.SensorMode.IMU;
+            params.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+            imu.initialize(params);
+        } catch (Exception e) {
+            imu = null;
+        }
     }
 
-    // TeleOp control with gamepad
     public void driveWithGamepad(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
         double y = -gamepad.left_stick_y;
         double x = gamepad.left_stick_x;
         double rx = gamepad.right_stick_x;
 
-        angles = imu.getAngularOrientation();
-        double heading = angles.firstAngle;
+        double heading = 0.0;
+        if (imu != null) {
+            angles = imu.getAngularOrientation();
+            heading = angles.firstAngle;
+        }
         double correction = heading * 0.05;
 
         double fl = y + x + rx + correction;
@@ -55,7 +60,9 @@ public class Drive {
         double br = y + x - rx + correction;
 
         double max = Math.max(Math.abs(fl), Math.max(Math.abs(bl), Math.max(Math.abs(fr), Math.abs(br))));
-        if (max > 1.0) { fl/=max; bl/=max; fr/=max; br/=max; }
+        if (max > 1.0) {
+            fl /= max; bl /= max; fr /= max; br /= max;
+        }
 
         targetFL = fl * velocityScale;
         targetFR = fr * velocityScale;
@@ -68,7 +75,6 @@ public class Drive {
         backRight.setVelocity(targetBR);
     }
 
-    // Stop all motors with a single call
     public void setDrivePower(double power) {
         frontLeft.setPower(power);
         frontRight.setPower(power);
@@ -76,7 +82,6 @@ public class Drive {
         backRight.setPower(power);
     }
 
-    // Simple encoder-based forward drive
     public void driveForwardInches(double inches, double power) {
         int ticks = (int)(inches * TICKS_PER_INCH);
 
@@ -107,9 +112,8 @@ public class Drive {
         setDrivePower(0.0);
     }
 
-    // Simple IMU-based turn
     public void gyroTurn(double targetAngle, double power) {
-        double currentAngle = imu.getAngularOrientation().firstAngle;
+        double currentAngle = (imu != null) ? imu.getAngularOrientation().firstAngle : 0.0;
 
         while (Math.abs(currentAngle - targetAngle) > 2) {
             if (currentAngle < targetAngle) {
@@ -123,7 +127,7 @@ public class Drive {
                 frontRight.setPower(power);
                 backRight.setPower(power);
             }
-            currentAngle = imu.getAngularOrientation().firstAngle;
+            currentAngle = (imu != null) ? imu.getAngularOrientation().firstAngle : 0.0;
         }
 
         setDrivePower(0.0);
