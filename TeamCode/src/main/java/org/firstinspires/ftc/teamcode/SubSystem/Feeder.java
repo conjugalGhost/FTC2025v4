@@ -24,8 +24,8 @@ public class Feeder {
     }
 
     public void updateTelemetry(Telemetry telemetry) {
-        telemetry.addLine("Feeder Status")
-                .addData("Position", feederMotor.getCurrentPosition())
-                .addData("Power", feederMotor.getPower());
+        telemetry.addLine("=== FEEDER ===")
+                .addData("Motor Position", feederMotor.getCurrentPosition())
+                .addData("Motor Power", feederMotor.getPower());
     }
 }

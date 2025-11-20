@@ -27,10 +27,39 @@ public abstract class AutonBase extends LinearOpMode {
         params.angleUnit = BNO055IMU.AngleUnit.DEGREES;
         imu.initialize(params);
 
-        // Wait for start and run autonomous routine
+        // Wait for start
         waitForStart();
+
         if (opModeIsActive()) {
+            // Run the autonomous routine implemented in subclasses
             runAuton();
+
+            // Telemetry loop during autonomous
+            while (opModeIsActive()) {
+                telemetry.addLine("=== DRIVE ===");
+                drive.updateTelemetry(telemetry);
+
+                telemetry.addLine("=== SHOOTER ===");
+                shooter.updateTelemetry(telemetry);
+
+                telemetry.addLine("=== FEEDER ===");
+                feeder.updateTelemetry(telemetry);
+
+                telemetry.addLine("=== IMU ===")
+                        .addData("Heading (deg)", imu.getAngularOrientation().firstAngle);
+
+                // System Status Summary
+                String driveStatus = "OK";
+                String shooterStatus = (shooter != null) ? "OK" : "Stopped";
+                String feederStatus = (feeder != null) ? "OK" : "Stopped";
+
+                telemetry.addLine("=== SYSTEM STATUS ===")
+                        .addData("Drive", driveStatus)
+                        .addData("Shooter", shooterStatus)
+                        .addData("Feeder", feederStatus);
+
+                telemetry.update();
+            }
         }
 
         // Stop all subsystems safely
@@ -39,6 +68,6 @@ public abstract class AutonBase extends LinearOpMode {
         feeder.stop();
     }
 
-    // This is implemented in AutonRed and AutonBlue
+    // This must be implemented in AutonRed and AutonBlue
     protected abstract void runAuton();
 }
