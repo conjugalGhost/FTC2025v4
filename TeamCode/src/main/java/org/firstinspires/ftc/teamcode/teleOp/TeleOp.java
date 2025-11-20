@@ -24,25 +24,30 @@ public class TeleOp extends OpMode {
 
     @Override
     public void loop() {
+        // Drive system
         drive.driveWithGamepad(gamepad1);
 
-        if (gamepad2.a) shooter.shootForward();
-        else if (gamepad2.b) shooter.stop();
+        // Shooter control on right trigger
+        if (gamepad2.right_trigger > 0.1) {   // threshold to avoid accidental touch
+            shooter.shootForward();
+        } else {
+            shooter.stop();
+        }
 
-
-        if (gamepad2.x) {
+        // Feeder control: A forward, B reverse
+        if (gamepad2.a) {
             if (shooter.isReady()) {
                 feeder.feedForward();
             } else {
                 feeder.stop(); // prevent feeding until shooter is spun up
             }
-        } else if (gamepad2.y) {
+        } else if (gamepad2.b) {
             feeder.feedReverse();
         } else {
             feeder.stop();
         }
 
-        // Toggle telemetry with dpad_left
+        // Telemetry toggle with dpad_left
         if (gamepad2.dpad_left && !togglePressed) {
             telemetryEnabled = !telemetryEnabled;
             togglePressed = true;
@@ -50,6 +55,7 @@ public class TeleOp extends OpMode {
             togglePressed = false;
         }
 
+        // Telemetry output
         if (telemetryEnabled) {
             telemetry.addLine("=== DRIVE ===");
             drive.updateTelemetry(telemetry);
@@ -60,12 +66,13 @@ public class TeleOp extends OpMode {
             telemetry.addLine("=== FEEDER ===");
             feeder.updateTelemetry(telemetry);
 
+            // Shooter velocity check
             String shooterStatus = "OK";
             double targetVel = shooter.getTargetVelocity();
             double leftVel = shooter.getLeftVelocity();
             double rightVel = shooter.getRightVelocity();
             if (targetVel > 0 &&
-                    (Math.abs(leftVel + targetVel) > targetVel * 0.1 ||
+                    (Math.abs(leftVel - targetVel) > targetVel * 0.1 ||
                             Math.abs(rightVel - targetVel) > targetVel * 0.1)) {
                 shooterStatus = "Warning (Velocity Low)";
             }
