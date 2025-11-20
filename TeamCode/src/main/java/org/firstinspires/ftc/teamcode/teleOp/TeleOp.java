@@ -75,8 +75,8 @@ public class TeleOp extends OpMode {
             double leftVel = shooter.getLeftVelocity();
             double rightVel = shooter.getRightVelocity();
             if (targetVel > 0 &&
-                    (Math.abs(leftVel - targetVel) > targetVel * 0.1 ||
-                            Math.abs(rightVel - targetVel) > targetVel * 0.1)) {
+                    (Math.abs(leftVel - targetVel) > targetVel * 0.2 ||
+                            Math.abs(rightVel - targetVel) > targetVel * 0.2)) {
                 shooterStatus = "Warning (Velocity Low)";
             }
 
