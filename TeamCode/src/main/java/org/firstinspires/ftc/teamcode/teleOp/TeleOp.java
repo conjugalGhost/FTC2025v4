@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.teleOp;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.teamcode.SubSystem.Feeder;
-import org.firstinspires.ftc.teamcode.SubSystem.IMU;
+import org.firstinspires.ftc.teamcode.SubSystem.IMU;      // <-- corrected import
 import org.firstinspires.ftc.teamcode.SubSystem.Shooter;
 import org.firstinspires.ftc.teamcode.SubSystem.Drive;
 
@@ -15,7 +15,10 @@ public class TeleOp extends OpMode {
     private IMU imu;   // IMU subsystem
 
     private boolean telemetryEnabled = true;
-    private boolean togglePressed = false;
+    private boolean telemetryTogglePressed = false;
+
+    private boolean detailMode = false;
+    private boolean detailTogglePressed = false;
 
     // Track button press states for edge-triggering
     private boolean aWasPressed = false;
@@ -62,44 +65,24 @@ public class TeleOp extends OpMode {
         }
 
         // Telemetry toggle with dpad_left
-        if (gamepad2.dpad_left && !togglePressed) {
+        if (gamepad2.dpad_left && !telemetryTogglePressed) {
             telemetryEnabled = !telemetryEnabled;
-            togglePressed = true;
+            telemetryTogglePressed = true;
         } else if (!gamepad2.dpad_left) {
-            togglePressed = false;
+            telemetryTogglePressed = false;
+        }
+
+        // Detail mode toggle with dpad_right
+        if (gamepad2.dpad_right && !detailTogglePressed) {
+            detailMode = !detailMode;
+            detailTogglePressed = true;
+        } else if (!gamepad2.dpad_right) {
+            detailTogglePressed = false;
         }
 
         // Telemetry output
         if (telemetryEnabled) {
-            telemetry.addLine("=== DRIVE ===");
-            drive.updateTelemetry(telemetry);
-
-            telemetry.addLine("=== SHOOTER ===");
-            shooter.updateTelemetry(telemetry);
-
-            telemetry.addLine("=== FEEDER ===");
-            feeder.updateTelemetry(telemetry);
-
-            telemetry.addData("Heading", imu.getHeading());  // show IMU heading
-
-
-            // --- Shooter velocity conversion to ft/s ---
-            double D_in = 4.0;                  // wheel diameter in inches
-            double ticksPerRev = 560.0;         // encoder ticks per revolution
-            double leftTicksPerSec = shooter.getLeftVelocity();
-            double rightTicksPerSec = shooter.getRightVelocity();
-
-            double leftRPM = (leftTicksPerSec / ticksPerRev) * 60.0;
-            double rightRPM = (rightTicksPerSec / ticksPerRev) * 60.0;
-            double avgRPM = (leftRPM + rightRPM) / 2.0;
-
-            double vWheelFtPerSec = (Math.PI * D_in / 12.0) * (avgRPM / 60.0);
-
-            double k = 0.85;                    // slip/compression factor
-            double vExitFtPerSec = k * vWheelFtPerSec;
-
-            telemetry.addData("Shooter v_wheel (ft/s)", vWheelFtPerSec);
-            telemetry.addData("Shooter v_exit (ft/s)", vExitFtPerSec);
+            telemetry.addData("Heading", "%.1f°", imu.getHeading());
 
             // Shooter velocity check
             String shooterStatus = "OK";
@@ -112,10 +95,26 @@ public class TeleOp extends OpMode {
                 shooterStatus = "Warning (Velocity Low)";
             }
 
-            telemetry.addLine("=== SYSTEM STATUS ===")
-                    .addData("Drive", "OK")
-                    .addData("Shooter", shooterStatus)
-                    .addData("Feeder", "OK");
+            telemetry.addData("System", "Drive=OK Shooter=%s Feeder=OK", shooterStatus);
+
+            // Optional detail mode
+            if (detailMode) {
+                double D_in = 3.54;                  // REV 90 mm grip wheels
+                double ticksPerRev = 560.0;          // encoder ticks per revolution
+                double leftTicksPerSec = shooter.getLeftVelocity();
+                double rightTicksPerSec = shooter.getRightVelocity();
+                double avgTicksPerSec = (leftTicksPerSec + rightTicksPerSec) / 2.0;
+
+                double rpm = (avgTicksPerSec / ticksPerRev) * 60.0;
+                double circumferenceFt = Math.PI * D_in / 12.0;
+                double vWheelFtPerSec = circumferenceFt * (rpm / 60.0);
+
+                double k = 0.85;                     // slip/compression factor
+                double vExitFtPerSec = k * vWheelFtPerSec;
+
+                telemetry.addData("Shooter (ft/s)", "Wheel=%.2f Exit=%.2f", vWheelFtPerSec, vExitFtPerSec);
+                telemetry.addData("Shooter RPM", "%.0f", rpm);
+            }
 
             telemetry.update();
         }
