@@ -14,6 +14,9 @@ public abstract class AutonBase extends LinearOpMode {
     protected Feeder feeder;
     protected BNO055IMU imu;
 
+    // detail telemetry toggle
+    protected boolean detailMode = false;
+
     @Override
     public void runOpMode() {
         // Initialize subsystems
@@ -36,27 +39,20 @@ public abstract class AutonBase extends LinearOpMode {
 
             // Telemetry loop during autonomous
             while (opModeIsActive()) {
-                telemetry.addLine("=== DRIVE ===");
-                drive.updateTelemetry(telemetry);
-
-                telemetry.addLine("=== SHOOTER ===");
-                shooter.updateTelemetry(telemetry);
-
-                telemetry.addLine("=== FEEDER ===");
-                feeder.updateTelemetry(telemetry);
-
-                telemetry.addLine("=== IMU ===")
-                        .addData("Heading (deg)", imu.getAngularOrientation().firstAngle);
+                telemetry.addData("Heading (deg)", imu.getAngularOrientation().firstAngle);
 
                 // System Status Summary
                 String driveStatus = "OK";
                 String shooterStatus = (shooter != null) ? "OK" : "Stopped";
                 String feederStatus = (feeder != null) ? "OK" : "Stopped";
 
-                telemetry.addLine("=== SYSTEM STATUS ===")
-                        .addData("Drive", driveStatus)
-                        .addData("Shooter", shooterStatus)
-                        .addData("Feeder", feederStatus);
+                telemetry.addData("System", "Drive=%s Shooter=%s Feeder=%s",
+                        driveStatus, shooterStatus, feederStatus);
+
+                // Optional detail mode
+                if (detailMode) {
+                    logShooterVelocity();
+                }
 
                 telemetry.update();
             }
@@ -70,4 +66,23 @@ public abstract class AutonBase extends LinearOpMode {
 
     // This must be implemented in AutonRed and AutonBlue
     protected abstract void runAuton();
+
+    /** Compact + optional detail shooter telemetry */
+    protected void logShooterVelocity() {
+        double D_in = 3.54;                  // REV 90 mm grip wheels
+        double ticksPerRev = 560.0;          // encoder ticks per revolution
+        double leftTicksPerSec = shooter.getLeftVelocity();
+        double rightTicksPerSec = shooter.getRightVelocity();
+        double avgTicksPerSec = (leftTicksPerSec + rightTicksPerSec) / 2.0;
+
+        double rpm = (avgTicksPerSec / ticksPerRev) * 60.0;
+        double circumferenceFt = Math.PI * D_in / 12.0;
+        double vWheelFtPerSec = circumferenceFt * (rpm / 60.0);
+
+        double k = 0.85;                     // slip/compression factor
+        double vExitFtPerSec = k * vWheelFtPerSec;
+
+        telemetry.addData("Shooter (ft/s)", "Wheel=%.2f Exit=%.2f", vWheelFtPerSec, vExitFtPerSec);
+        telemetry.addData("Shooter RPM", "%.0f", rpm);
+    }
 }
