@@ -24,15 +24,16 @@ public class TeleOp extends OpMode {
     private boolean aWasPressed = false;
     private boolean bWasPressed = false;
 
+    // Initialize subsystems
     @Override
     public void init() {
-        drive = new Drive(hardwareMap);
-        shooter = new Shooter(hardwareMap);
-        feeder = new Feeder(hardwareMap);
+        drive = new Drive(hardwareMap);     // initialize drive
+        shooter = new Shooter(hardwareMap); // initialize shooter
+        feeder = new Feeder(hardwareMap);   // initialize feeder
         imu = new IMU(hardwareMap);   // initialize IMU
         feeder.resetEncoders();
     }
-
+    // Main loop
     @Override
     public void loop() {
         // Drive system
