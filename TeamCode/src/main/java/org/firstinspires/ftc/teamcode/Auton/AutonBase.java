@@ -20,6 +20,7 @@ public abstract class AutonBase extends LinearOpMode {
     // Calibration constant for encoder conversion
     protected static final double TICKS_PER_INCH = 7.6;
 
+    // Run the auton routine
     @Override
     public void runOpMode() throws InterruptedException {
         drive   = new Drive(hardwareMap);
