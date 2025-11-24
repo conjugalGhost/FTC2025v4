@@ -38,7 +38,7 @@ public class TeleOp extends OpMode {
         // Drive system
         drive.driveWithGamepad(gamepad1);
 
-// Shooter control: right trigger = forward, left trigger = reverse
+        // Shooter control: right trigger = forward, left trigger = reverse
         if (gamepad2.right_trigger > 0.1) {
             shooter.shootForward();
         } else if (gamepad2.left_trigger > 0.1) {
@@ -47,8 +47,7 @@ public class TeleOp extends OpMode {
             shooter.stop();
         }
 
-
-// Feeder control: A = step forward, B = step reverse
+        // Feeder control: A = step forward, B = step reverse
         if (gamepad2.a && !aWasPressed) {
             feeder.advanceOneStep();   // forward step
             aWasPressed = true;

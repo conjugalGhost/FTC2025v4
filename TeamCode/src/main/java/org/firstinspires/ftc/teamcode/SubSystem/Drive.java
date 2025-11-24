@@ -3,14 +3,11 @@ package org.firstinspires.ftc.teamcode.SubSystem;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
-import org.firstinspires.ftc.robotcore.external.Telemetry;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 public class Drive {
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
-    private double velocityScale = 2000.0;
-    private double targetFL, targetFR, targetBL, targetBR;
-
-    private static final double TICKS_PER_INCH = 45.0; // placeholder value
+    private static final double TICKS_PER_INCH = 7.6; // calculated value, fine-tune with calibration
 
     public Drive(HardwareMap hardwareMap) {
         frontLeft  = hardwareMap.get(DcMotorEx.class, "frontLeft");
@@ -28,11 +25,11 @@ public class Drive {
         backRight.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, drivePIDF);
     }
 
-    /** TeleOp drive with gamepad sticks (robot-centric) */
+    /** TeleOp drive with gamepad sticks (robot-centric mecanum) */
     public void driveWithGamepad(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
-        double y = -gamepad.left_stick_y; // forward/back
-        double x = gamepad.left_stick_x;  // strafe
-        double rx = gamepad.right_stick_x; // rotation
+        double y  = -gamepad.left_stick_y;  // forward/back
+        double x  = gamepad.left_stick_x;   // strafe
+        double rx = gamepad.right_stick_x;  // rotation
 
         double fl = y + x + rx;
         double bl = y - x + rx;
@@ -45,15 +42,10 @@ public class Drive {
             fl /= max; bl /= max; fr /= max; br /= max;
         }
 
-        targetFL = fl * velocityScale;
-        targetFR = fr * velocityScale;
-        targetBL = bl * velocityScale;
-        targetBR = br * velocityScale;
-
-        frontLeft.setVelocity(targetFL);
-        frontRight.setVelocity(targetFR);
-        backLeft.setVelocity(targetBL);
-        backRight.setVelocity(targetBR);
+        frontLeft.setPower(fl);
+        backLeft.setPower(bl);
+        frontRight.setPower(fr);
+        backRight.setPower(br);
     }
 
     /** Simple power set for all motors */
@@ -64,10 +56,11 @@ public class Drive {
         backRight.setPower(power);
     }
 
-    /** Encoder-based forward drive */
-    public void driveForwardInches(double inches, double power) {
+    /** Encoder-based forward drive with telemetry */
+    public void driveForwardInches(double inches, double power, LinearOpMode opMode) {
         int ticks = (int)(inches * TICKS_PER_INCH);
 
+        // Reset encoders before each move
         frontLeft.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         frontRight.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         backLeft.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
@@ -88,37 +81,66 @@ public class Drive {
         backLeft.setPower(power);
         backRight.setPower(power);
 
-        while (frontLeft.isBusy() && frontRight.isBusy() &&
-                backLeft.isBusy() && backRight.isBusy()) {
-            // Optionally add telemetry updates here
+        while (opMode.opModeIsActive() &&
+                (frontLeft.isBusy() || frontRight.isBusy() || backLeft.isBusy() || backRight.isBusy())) {
+            opMode.telemetry.addData("FL pos", frontLeft.getCurrentPosition());
+            opMode.telemetry.addData("FR pos", frontRight.getCurrentPosition());
+            opMode.telemetry.addData("BL pos", backLeft.getCurrentPosition());
+            opMode.telemetry.addData("BR pos", backRight.getCurrentPosition());
+            opMode.telemetry.update();
         }
 
-        setDrivePower(0.0);
+        stop();
     }
 
-    /** New: field-centric drive using heading from AutonBase */
-    public void driveWithHeading(double forward, double strafe, double headingDeg) {
-        double h = Math.toRadians(headingDeg);
+    /** Drive forward with IMU heading correction */
+    public void driveStraightWithHeading(double inches, double power, double targetHeading,
+                                         LinearOpMode opMode, IMU imu) {
+        int ticks = (int)(inches * TICKS_PER_INCH);
 
-        double rotatedX = strafe * Math.cos(-h) - forward * Math.sin(-h);
-        double rotatedY = strafe * Math.sin(-h) + forward * Math.cos(-h);
+        // Reset encoders
+        frontLeft.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        frontRight.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        backLeft.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        backRight.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
 
-        double fl = rotatedY + rotatedX;
-        double bl = rotatedY - rotatedX;
-        double fr = rotatedY - rotatedX;
-        double br = rotatedY + rotatedX;
+        frontLeft.setTargetPosition(ticks);
+        frontRight.setTargetPosition(ticks);
+        backLeft.setTargetPosition(ticks);
+        backRight.setTargetPosition(ticks);
 
-        double max = Math.max(1.0, Math.max(Math.abs(fl),
-                Math.max(Math.abs(bl),
-                        Math.max(Math.abs(fr), Math.abs(br)))));
+        frontLeft.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        frontRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        backLeft.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        backRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
-        frontLeft.setPower(fl / max);
-        backLeft.setPower(bl / max);
-        frontRight.setPower(fr / max);
-        backRight.setPower(br / max);
+        frontLeft.setPower(power);
+        frontRight.setPower(power);
+        backLeft.setPower(power);
+        backRight.setPower(power);
+
+        while (opMode.opModeIsActive() &&
+                (frontLeft.isBusy() || frontRight.isBusy() || backLeft.isBusy() || backRight.isBusy())) {
+            double currentHeading = imu.getHeading();
+            double error = targetHeading - currentHeading;
+            double correction = error * 0.02; // proportional gain
+
+            frontLeft.setPower(power + correction);
+            backLeft.setPower(power + correction);
+            frontRight.setPower(power - correction);
+            backRight.setPower(power - correction);
+
+            opMode.telemetry.addData("Heading", currentHeading);
+            opMode.telemetry.addData("Error", error);
+            opMode.telemetry.addData("FL pos", frontLeft.getCurrentPosition());
+            opMode.telemetry.addData("FR pos", frontRight.getCurrentPosition());
+            opMode.telemetry.update();
+        }
+
+        stop();
     }
 
-    /** New: simple in-place turn */
+    /** Simple in-place turn */
     public void turn(double power) {
         double p = Math.max(-1.0, Math.min(1.0, power));
         frontLeft.setPower(p);
@@ -127,19 +149,8 @@ public class Drive {
         backRight.setPower(-p);
     }
 
-    /** New: stop all motors */
+    /** Stop all motors */
     public void stop() {
-        frontLeft.setPower(0);
-        backLeft.setPower(0);
-        frontRight.setPower(0);
-        backRight.setPower(0);
-    }
-
-    public void updateTelemetry(Telemetry telemetry) {
-        telemetry.addLine("=== DRIVE ===")
-                .addData("Target FL", targetFL).addData("Actual FL", frontLeft.getVelocity())
-                .addData("Target FR", targetFR).addData("Actual FR", frontRight.getVelocity())
-                .addData("Target BL", targetBL).addData("Actual BL", backLeft.getVelocity())
-                .addData("Target BR", targetBR).addData("Actual BR", backRight.getVelocity());
+        setDrivePower(0);
     }
 }

@@ -11,11 +11,12 @@ public abstract class AutonBase extends LinearOpMode {
     protected IMU imu;
     protected Shooter shooter;
     protected Feeder feeder;
+
+    // Flag for optional detailed telemetry
     protected boolean detailMode = false;
 
     @Override
     public void runOpMode() throws InterruptedException {
-        // Initialize subsystems
         drive   = new Drive(hardwareMap);
         imu     = new IMU(hardwareMap);
         shooter = new Shooter(hardwareMap);
@@ -31,26 +32,22 @@ public abstract class AutonBase extends LinearOpMode {
         }
     }
 
-    /** Override this in your auton routines */
+    // Each auton routine must implement this
     protected abstract void runAuton();
 
-    /** Helper: drive forward a measured distance in inches */
+    // Forward drive helper
     protected void driveForwardInches(double inches, double power) {
-        drive.driveForwardInches(inches, power);
-        drive.stop();
+        drive.driveForwardInches(inches, power, this);
     }
 
-    /** Helper: turn to a specific heading (±2° tolerance) */
+    // Turn helper using IMU heading
     protected void turnToHeading(double targetHeading) {
         while (opModeIsActive()) {
             double currentHeading = imu.getHeading();
             double error = targetHeading - currentHeading;
-
             if (Math.abs(error) < 2) break;
-
             double turnPower = error > 0 ? 0.3 : -0.3;
             drive.turn(turnPower);
-
             telemetry.addData("Target", targetHeading);
             telemetry.addData("Current", currentHeading);
             telemetry.addData("Error", error);
@@ -59,12 +56,10 @@ public abstract class AutonBase extends LinearOpMode {
         drive.stop();
     }
 
-    /** Optional: reset IMU yaw to zero */
-    protected void resetHeading() {
-        imu.resetYaw();
-    }
+    // Reset IMU yaw
+    protected void resetHeading() { imu.resetYaw(); }
 
-    /** Optional helper to log shooter velocity */
+    // Shooter telemetry helper
     protected void logShooterVelocity() {
         telemetry.addData("Shooter Left Vel", shooter.getLeftVelocity());
         telemetry.addData("Shooter Right Vel", shooter.getRightVelocity());
