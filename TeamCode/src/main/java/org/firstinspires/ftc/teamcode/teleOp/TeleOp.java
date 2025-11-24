@@ -4,7 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.teamcode.SubSystem.Feeder;
 import org.firstinspires.ftc.teamcode.SubSystem.IMU;      // updated IMU subsystem
 import org.firstinspires.ftc.teamcode.SubSystem.Shooter;
-import org.firstinspires.ftc.teamcode.SubSystem.Drive;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Scrap Cat", group = "TeleOp")
 public class TeleOp extends OpMode {

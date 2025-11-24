@@ -67,4 +67,10 @@ public class Drive {
     public void stop() {
         setDrivePower(0);
     }
+
+    // Accessors for auton routines
+    public DcMotorEx getFrontLeft() { return frontLeft; }
+    public DcMotorEx getFrontRight() { return frontRight; }
+    public DcMotorEx getBackLeft() { return backLeft; }
+    public DcMotorEx getBackRight() { return backRight; }
 }
