@@ -47,18 +47,25 @@ public class TeleOp extends OpMode {
             shooter.stop();
         }
 
-        // Feeder control: A = step forward, B = step reverse
-        if (gamepad2.a && !aWasPressed) {
-            feeder.advanceOneStep();   // forward step
-            aWasPressed = true;
-        } else if (!gamepad2.a) {
-            aWasPressed = false;
-        }
+        // Feeder control: only works if shooter is active (forward OR reverse)
+        if (gamepad2.right_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
+            if (gamepad2.a && !aWasPressed) {
+                feeder.advanceOneStep();   // forward step
+                aWasPressed = true;
+            } else if (!gamepad2.a) {
+                aWasPressed = false;
+            }
 
-        if (gamepad2.b && !bWasPressed) {
-            feeder.reverseOneStep();   // reverse step
-            bWasPressed = true;
-        } else if (!gamepad2.b) {
+            if (gamepad2.b && !bWasPressed) {
+                feeder.reverseOneStep();   // reverse step
+                bWasPressed = true;
+            } else if (!gamepad2.b) {
+                bWasPressed = false;
+            }
+        } else {
+            // Shooter not active → feeder locked out
+            feeder.stop();
+            aWasPressed = false;
             bWasPressed = false;
         }
 
