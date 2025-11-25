@@ -7,7 +7,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class Shooter {
     private DcMotorEx leftShooter;
     private DcMotorEx rightShooter;
-    private double targetVelocity = 0;
+    private double targetPower = 0;
 
     // Constants for REV HD Hex direct drive with 90mm wheels
     private static final double TICKS_PER_REV = 28.0;       // encoder CPR
@@ -22,23 +22,30 @@ public class Shooter {
 
         if (leftShooter != null) {
             leftShooter.setDirection(DcMotorEx.Direction.REVERSE);
-            leftShooter.setVelocityPIDFCoefficients(50.0, 0.0, 0.0, 14.0);
         }
         if (rightShooter != null) {
             rightShooter.setDirection(DcMotorEx.Direction.FORWARD);
-            rightShooter.setVelocityPIDFCoefficients(50.0, 0.0, 0.0, 14.0);
         }
     }
 
-    /** Set shooter velocity in ticks/sec */
-    public void setVelocity(double velocity) {
-        targetVelocity = velocity;
-        if (leftShooter != null) leftShooter.setVelocity(targetVelocity);
-        if (rightShooter != null) rightShooter.setVelocity(targetVelocity);
+    /** Set shooter power (open-loop, 0.0–1.0) */
+    public void setPower(double power) {
+        targetPower = power;
+        if (leftShooter != null) leftShooter.setPower(targetPower);
+        if (rightShooter != null) rightShooter.setPower(targetPower);
+    }
+
+    /** Convenience wrappers for preset shooter power (70% forward/reverse) */
+    public void shootForward() {
+        setPower(0.7);   // 70% forward
+    }
+
+    public void shootReverse() {
+        setPower(-0.7);  // 70% reverse
     }
 
     public void stop() {
-        targetVelocity = 0;
+        targetPower = 0;
         if (leftShooter != null) leftShooter.setPower(0);
         if (rightShooter != null) rightShooter.setPower(0);
     }
@@ -64,9 +71,9 @@ public class Shooter {
 
     /** Telemetry */
     public void updateTelemetry(Telemetry telemetry) {
-        telemetry.addData("Target Vel (ticks/sec)", targetVelocity);
-        telemetry.addData("Left Vel", getLeftVelocity());
-        telemetry.addData("Right Vel", getRightVelocity());
+        telemetry.addData("Target Power", targetPower);
+        telemetry.addData("Left Vel (ticks/sec)", getLeftVelocity());
+        telemetry.addData("Right Vel (ticks/sec)", getRightVelocity());
         telemetry.addData("Shooter RPM", "%.0f", getRPM());
         telemetry.addData("Exit Velocity (ft/s)", "%.1f", getExitVelocityFtPerSec());
     }
