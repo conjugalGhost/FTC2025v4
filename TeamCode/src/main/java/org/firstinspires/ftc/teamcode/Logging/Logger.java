@@ -49,7 +49,7 @@ public class Logger extends LinearOpMode {
             // Shooter values
             double rpm = shooter.getRPM();
             double exitVel = shooter.getExitVelocityFtPerSec();
-            double targetPower = shooter.getTargetPower(); // add getter in Shooter if not present
+            double targetPower = shooter.getTargetPower();
 
             // Drive encoder positions
             int fl = drive.getFrontLeft().getCurrentPosition();
@@ -60,8 +60,8 @@ public class Logger extends LinearOpMode {
             // IMU heading
             double heading = imu.getHeading();
 
-            // Feeder state (forward=1, reverse=-1, stopped=0)
-            int feederState = 0;
+            // Feeder state (1=forward, -1=reverse, 0=stopped)
+            int feederState = feeder.getState();
 
             // Battery voltage
             double voltage = battery.getVoltage();
@@ -79,6 +79,7 @@ public class Logger extends LinearOpMode {
 
             // Show live telemetry too
             shooter.updateTelemetry(telemetry);
+            feeder.updateTelemetry(telemetry);
             telemetry.addData("Heading", heading);
             telemetry.addData("Battery", voltage);
             telemetry.update();

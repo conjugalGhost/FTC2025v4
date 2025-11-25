@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.SubSystem.Drive;
 import org.firstinspires.ftc.teamcode.SubSystem.IMU;
 import org.firstinspires.ftc.teamcode.SubSystem.Shooter;
-import org.firstinspires.ftc.teamcode.SubSystem.Feeder;
 
 public abstract class AutonBase extends LinearOpMode {
     protected Drive drive;
