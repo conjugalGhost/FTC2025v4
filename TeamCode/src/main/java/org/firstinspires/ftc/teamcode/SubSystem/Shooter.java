@@ -54,6 +54,11 @@ public class Shooter {
     public double getLeftVelocity() { return leftShooter != null ? leftShooter.getVelocity() : 0; }
     public double getRightVelocity() { return rightShooter != null ? rightShooter.getVelocity() : 0; }
 
+    /** Return the last commanded shooter power */
+    public double getTargetPower() {
+        return targetPower;
+    }
+
     /** Derived physics values */
     public double getAverageVelocityTicks() {
         return (getLeftVelocity() + getRightVelocity()) / 2.0;
