@@ -18,7 +18,7 @@ public abstract class AutonBase extends LinearOpMode {
     protected boolean detailMode = false;
 
     // Calibration constant for encoder conversion
-    protected static final double TICKS_PER_INCH = 7.6;
+    protected static final double TICKS_PER_INCH = 8.9;
 
     // Run the auton routine
     @Override

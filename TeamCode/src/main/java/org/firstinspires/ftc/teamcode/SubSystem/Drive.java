@@ -3,9 +3,18 @@ package org.firstinspires.ftc.teamcode.SubSystem;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 public class Drive {
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
+
+    // Constants for drive math (4:1 gearing, 4" wheels)
+    private static final double TICKS_PER_REV = 28.0;        // REV HD Hex encoder CPR
+    private static final double GEAR_RATIO = 4.0;            // motor revs per wheel rev
+    private static final double WHEEL_DIAMETER_IN = 4.0;     // mecanum wheel diameter
+    private static final double WHEEL_CIRCUMFERENCE_FT = Math.PI * WHEEL_DIAMETER_IN / 12.0;
+    private static final double TICKS_PER_WHEEL_REV = TICKS_PER_REV * GEAR_RATIO; // 112
+    private static final double FT_PER_TICK = WHEEL_CIRCUMFERENCE_FT / TICKS_PER_WHEEL_REV;
 
     public Drive(HardwareMap hardwareMap) {
         frontLeft  = hardwareMap.get(DcMotorEx.class, "frontLeft");
@@ -24,7 +33,7 @@ public class Drive {
     }
 
     /** TeleOp drive with gamepad sticks (robot-centric mecanum) */
-    public void driveWithGamepad(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
+    public void driveWithGamepad(Gamepad gamepad) {
         double y  = -gamepad.left_stick_y;  // forward/back
         double x  = gamepad.left_stick_x;   // strafe
         double rx = gamepad.right_stick_x;  // rotation
@@ -66,6 +75,19 @@ public class Drive {
     /** Stop all motors */
     public void stop() {
         setDrivePower(0);
+    }
+
+    // Conversion helpers for auton/telemetry
+    public double ticksToFeet(int ticks) {
+        return ticks * FT_PER_TICK;
+    }
+
+    public int feetToTicks(double feet) {
+        return (int)(feet / FT_PER_TICK);
+    }
+
+    public double ticksPerSecToFtPerSec(double ticksPerSec) {
+        return ticksPerSec * FT_PER_TICK;
     }
 
     // Accessors for auton routines

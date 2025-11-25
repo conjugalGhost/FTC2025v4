@@ -96,7 +96,7 @@ public class TeleOp extends OpMode {
             // Optional detail mode
             if (detailMode) {
                 double D_in = 3.54;                  // REV 90 mm grip wheels
-                double ticksPerRev = 560.0;          // encoder ticks per revolution
+                double ticksPerRev = 28.0 * 4.0;          // encoder ticks per revolution * gear ratio, ie: 28*4=112 ticks
                 double leftTicksPerSec = shooter.getLeftVelocity();
                 double rightTicksPerSec = shooter.getRightVelocity();
                 double avgTicksPerSec = (leftTicksPerSec + rightTicksPerSec) / 2.0;
