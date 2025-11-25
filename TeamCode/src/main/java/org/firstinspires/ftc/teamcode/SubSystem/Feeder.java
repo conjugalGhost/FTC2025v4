@@ -13,6 +13,9 @@ public class Feeder {
 
     private static final int STEP_TICKS = 144; // ~180°
 
+    // Feeder state: 1 = forward, -1 = reverse, 0 = stopped
+    private int state = 0;
+
     public Feeder(HardwareMap hardwareMap) {
         try {
             feederLeft = hardwareMap.get(DcMotorEx.class, "feederLeft");
@@ -40,6 +43,7 @@ public class Feeder {
         }
         leftTarget = 0;
         rightTarget = 0;
+        state = 0;
     }
 
     // Step forward (advance 180°)
@@ -57,6 +61,8 @@ public class Feeder {
             feederRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             feederRight.setPower(1.0); // full power
         }
+
+        state = 1;
     }
 
     // Step reverse (back 180°)
@@ -74,11 +80,19 @@ public class Feeder {
             feederRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
             feederRight.setPower(1.0); // full power
         }
+
+        state = -1;
     }
 
     public void stop() {
         if (feederLeft != null) feederLeft.setPower(0.0);
         if (feederRight != null) feederRight.setPower(0.0);
+        state = 0;
+    }
+
+    /** Return feeder state (1=forward, -1=reverse, 0=stopped) */
+    public int getState() {
+        return state;
     }
 
     public void updateTelemetry(Telemetry telemetry) {
@@ -95,5 +109,8 @@ public class Feeder {
         } else {
             telemetry.addData("Right Motor", "Not Found");
         }
+
+        telemetry.addData("Feeder State", state == 1 ? "Forward" :
+                state == -1 ? "Reverse" : "Stopped");
     }
 }
