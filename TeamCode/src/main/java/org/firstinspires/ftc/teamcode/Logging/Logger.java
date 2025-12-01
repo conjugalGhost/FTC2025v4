@@ -20,6 +20,10 @@ public class Logger extends LinearOpMode {
     private FileWriter writer;
     private VoltageSensor battery;
 
+    // Example telemetry flags (replace with your actual toggles if needed)
+    private boolean telemetryEnabled = true;
+    private boolean detailMode = true;
+
     @Override
     public void runOpMode() throws InterruptedException {
         shooter = new Shooter(hardwareMap);
@@ -34,10 +38,13 @@ public class Logger extends LinearOpMode {
             // Create CSV file on Robot Controller phone
             writer = new FileWriter("/sdcard/FIRST/match_log.csv");
 
-            // Write header row
-            writer.write("Time(ms),ShooterRPM,ExitVelocityFtPerSec,"
-                    + "ShooterTargetPower,BatteryVoltage,"
-                    + "FL,FR,BL,BR,Heading,FeederState\n");
+            // Expanded header row
+            writer.write("Time(ms),ShooterRPM,ExitVelocityFtPerSec,ShooterTargetPower,BatteryVoltage,"
+                    + "FL_ticks,FR_ticks,BL_ticks,BR_ticks,"
+                    + "FL_power,FR_power,BL_power,BR_power,"
+                    + "Heading,FeederState,FeederTicks,"
+                    + "ShooterLeftVel,ShooterRightVel,ShooterAvgVel,"
+                    + "TelemetryEnabled,DetailMode\n");
         } catch (IOException e) {
             telemetry.addLine("Failed to open log file");
             telemetry.update();
@@ -51,27 +58,47 @@ public class Logger extends LinearOpMode {
             double exitVel = shooter.getExitVelocityFtPerSec();
             double targetPower = shooter.getTargetPower();
 
+            // Shooter velocities
+            double leftVel = shooter.getLeftVelocity();
+            double rightVel = shooter.getRightVelocity();
+            double avgVel = (leftVel + rightVel) / 2.0;
+
             // Drive encoder positions
             int fl = drive.getFrontLeft().getCurrentPosition();
             int fr = drive.getFrontRight().getCurrentPosition();
             int bl = drive.getBackLeft().getCurrentPosition();
             int br = drive.getBackRight().getCurrentPosition();
 
+            // Drive motor powers
+            double flPower = drive.getFrontLeft().getPower();
+            double frPower = drive.getFrontRight().getPower();
+            double blPower = drive.getBackLeft().getPower();
+            double brPower = drive.getBackRight().getPower();
+
             // IMU heading
             double heading = imu.getHeading();
 
-            // Feeder state (1=forward, -1=reverse, 0=stopped)
+            // Feeder state and ticks
             int feederState = feeder.getState();
+            int feederTicks = feeder.getCurrentPosition();
 
             // Battery voltage
             double voltage = battery.getVoltage();
 
             // Log to CSV
             try {
-                writer.write(String.format("%d,%.0f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%.2f,%d\n",
-                        System.currentTimeMillis(), rpm, exitVel,
-                        targetPower, voltage,
-                        fl, fr, bl, br, heading, feederState));
+                writer.write(String.format("%d,%.0f,%.2f,%.2f,%.2f,"
+                                + "%d,%d,%d,%d,"
+                                + "%.2f,%.2f,%.2f,%.2f,"
+                                + "%.2f,%d,%d,"
+                                + "%.2f,%.2f,%.2f,"
+                                + "%b,%b\n",
+                        System.currentTimeMillis(), rpm, exitVel, targetPower, voltage,
+                        fl, fr, bl, br,
+                        flPower, frPower, blPower, brPower,
+                        heading, feederState, feederTicks,
+                        leftVel, rightVel, avgVel,
+                        telemetryEnabled, detailMode));
                 writer.flush();
             } catch (IOException e) {
                 telemetry.addLine("Failed to write log");

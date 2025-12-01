@@ -54,12 +54,12 @@ public class Feeder {
         if (feederLeft != null) {
             feederLeft.setTargetPosition(leftTarget);
             feederLeft.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-            feederLeft.setPower(1.0); // full power
+            feederLeft.setPower(1.0);
         }
         if (feederRight != null) {
             feederRight.setTargetPosition(rightTarget);
             feederRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-            feederRight.setPower(1.0); // full power
+            feederRight.setPower(1.0);
         }
 
         state = 1;
@@ -73,12 +73,12 @@ public class Feeder {
         if (feederLeft != null) {
             feederLeft.setTargetPosition(leftTarget);
             feederLeft.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-            feederLeft.setPower(1.0); // full power
+            feederLeft.setPower(1.0);
         }
         if (feederRight != null) {
             feederRight.setTargetPosition(rightTarget);
             feederRight.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-            feederRight.setPower(1.0); // full power
+            feederRight.setPower(1.0);
         }
 
         state = -1;
@@ -93,6 +93,21 @@ public class Feeder {
     /** Return feeder state (1=forward, -1=reverse, 0=stopped) */
     public int getState() {
         return state;
+    }
+
+    // --- Encoder accessors for logging ---
+    public int getLeftPosition() {
+        return feederLeft != null ? feederLeft.getCurrentPosition() : 0;
+    }
+
+    public int getRightPosition() {
+        return feederRight != null ? feederRight.getCurrentPosition() : 0;
+    }
+
+    public int getAveragePosition() {
+        int left = feederLeft != null ? feederLeft.getCurrentPosition() : 0;
+        int right = feederRight != null ? feederRight.getCurrentPosition() : 0;
+        return (left + right) / 2;
     }
 
     public void updateTelemetry(Telemetry telemetry) {
