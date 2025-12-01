@@ -42,7 +42,7 @@ public class Logger extends LinearOpMode {
             writer.write("Time(ms),ShooterRPM,ExitVelocityFtPerSec,ShooterTargetPower,BatteryVoltage,"
                     + "FL_ticks,FR_ticks,BL_ticks,BR_ticks,"
                     + "FL_power,FR_power,BL_power,BR_power,"
-                    + "Heading,FeederState,FeederTicks,"
+                    + "Heading,FeederState,FeederLeftTicks,FeederRightTicks,FeederAvgTicks,"
                     + "ShooterLeftVel,ShooterRightVel,ShooterAvgVel,"
                     + "TelemetryEnabled,DetailMode\n");
         } catch (IOException e) {
@@ -80,7 +80,9 @@ public class Logger extends LinearOpMode {
 
             // Feeder state and ticks
             int feederState = feeder.getState();
-            int feederTicks = feeder.getCurrentPosition();
+            int feederLeftTicks = feeder.getLeftPosition();
+            int feederRightTicks = feeder.getRightPosition();
+            int feederAvgTicks = feeder.getAveragePosition();
 
             // Battery voltage
             double voltage = battery.getVoltage();
@@ -90,13 +92,13 @@ public class Logger extends LinearOpMode {
                 writer.write(String.format("%d,%.0f,%.2f,%.2f,%.2f,"
                                 + "%d,%d,%d,%d,"
                                 + "%.2f,%.2f,%.2f,%.2f,"
-                                + "%.2f,%d,%d,"
+                                + "%.2f,%d,%d,%d,%d,"
                                 + "%.2f,%.2f,%.2f,"
                                 + "%b,%b\n",
                         System.currentTimeMillis(), rpm, exitVel, targetPower, voltage,
                         fl, fr, bl, br,
                         flPower, frPower, blPower, brPower,
-                        heading, feederState, feederTicks,
+                        heading, feederState, feederLeftTicks, feederRightTicks, feederAvgTicks,
                         leftVel, rightVel, avgVel,
                         telemetryEnabled, detailMode));
                 writer.flush();
