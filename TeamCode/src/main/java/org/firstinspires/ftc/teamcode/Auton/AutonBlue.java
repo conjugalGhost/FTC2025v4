@@ -15,7 +15,7 @@ public class AutonBlue extends AutonBase {
 
         // Example movement before shooting
         driveForwardInches(72, 0.5);   // drive forward in inches
-        turnToHeading(45);             // turn to (input) degrees
+        turnToHeading(-45);             // turn to (input) degrees
         driveForwardInches(52, 0.5);   // drive forward in inches
 
         // Spin up shooter (70% power via helper)

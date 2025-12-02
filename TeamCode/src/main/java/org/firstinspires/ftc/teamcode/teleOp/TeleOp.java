@@ -4,7 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.SubSystem.Drive;
 import org.firstinspires.ftc.teamcode.SubSystem.Feeder;
-import org.firstinspires.ftc.teamcode.SubSystem.IMU;      // updated IMU subsystem
+import org.firstinspires.ftc.teamcode.SubSystem.IMU;
 import org.firstinspires.ftc.teamcode.SubSystem.Shooter;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Scrap Cat", group = "TeleOp")
@@ -13,7 +13,7 @@ public class TeleOp extends OpMode {
     private Drive drive;
     private Shooter shooter;
     private Feeder feeder;
-    private IMU imu;   // IMU subsystem
+    private IMU imu;
 
     private boolean telemetryEnabled = true;
     private boolean telemetryTogglePressed = false;
@@ -21,26 +21,40 @@ public class TeleOp extends OpMode {
     private boolean detailMode = false;
     private boolean detailTogglePressed = false;
 
-    // Track button press states for edge-triggering
     private boolean aWasPressed = false;
     private boolean bWasPressed = false;
 
-    // Initialize subsystems
     @Override
     public void init() {
-        drive = new Drive(hardwareMap);     // initialize drive
-        shooter = new Shooter(hardwareMap); // initialize shooter
-        feeder = new Feeder(hardwareMap);   // initialize feeder
-        imu = new IMU(hardwareMap);   // initialize IMU
+        drive = new Drive(hardwareMap);
+        shooter = new Shooter(hardwareMap);
+        feeder = new Feeder(hardwareMap);
+        imu = new IMU(hardwareMap);
         feeder.resetEncoders();
     }
-    // Main loop
+
     @Override
     public void loop() {
-        // Drive system
-        drive.driveWithGamepad(gamepad1);
+        // --- Mecanum drive control using gamepad1 ---
+        double y  = -gamepad1.left_stick_y; // forward/back
+        double x  = gamepad1.left_stick_x;  // strafe
+        double rx = gamepad1.right_stick_x; // rotation
 
-        // Shooter control: right trigger = forward, left trigger = reverse
+        double frontLeftPower  = y + x + rx;
+        double backLeftPower   = y - x + rx;
+        double frontRightPower = y - x - rx;
+        double backRightPower  = y + x - rx;
+
+        double max = Math.max(1.0, Math.max(Math.abs(frontLeftPower),
+                Math.max(Math.abs(backLeftPower),
+                        Math.max(Math.abs(frontRightPower), Math.abs(backRightPower)))));
+
+        drive.getFrontLeft().setPower(frontLeftPower / max);
+        drive.getBackLeft().setPower(backLeftPower / max);
+        drive.getFrontRight().setPower(frontRightPower / max);
+        drive.getBackRight().setPower(backRightPower / max);
+
+        // --- Shooter control ---
         if (gamepad2.right_trigger > 0.1) {
             shooter.shootForward();
         } else if (gamepad2.left_trigger > 0.1) {
@@ -49,29 +63,28 @@ public class TeleOp extends OpMode {
             shooter.stop();
         }
 
-        // Feeder control: only works if shooter is active (forward OR reverse)
+        // --- Feeder control (only if shooter active) ---
         if (gamepad2.right_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
             if (gamepad2.a && !aWasPressed) {
-                feeder.advanceOneStep();   // forward step
+                feeder.advanceOneStep();
                 aWasPressed = true;
             } else if (!gamepad2.a) {
                 aWasPressed = false;
             }
 
             if (gamepad2.b && !bWasPressed) {
-                feeder.reverseOneStep();   // reverse step
+                feeder.reverseOneStep();
                 bWasPressed = true;
             } else if (!gamepad2.b) {
                 bWasPressed = false;
             }
         } else {
-            // Shooter not active → feeder locked out
             feeder.stop();
             aWasPressed = false;
             bWasPressed = false;
         }
 
-        // Telemetry toggle with dpad_left
+        // --- Telemetry toggles ---
         if (gamepad2.dpad_left && !telemetryTogglePressed) {
             telemetryEnabled = !telemetryEnabled;
             telemetryTogglePressed = true;
@@ -79,7 +92,6 @@ public class TeleOp extends OpMode {
             telemetryTogglePressed = false;
         }
 
-        // Detail mode toggle with dpad_right
         if (gamepad2.dpad_right && !detailTogglePressed) {
             detailMode = !detailMode;
             detailTogglePressed = true;
@@ -87,16 +99,15 @@ public class TeleOp extends OpMode {
             detailTogglePressed = false;
         }
 
-        // Telemetry output
+        // --- Telemetry output ---
         if (telemetryEnabled) {
             double heading = imu.getHeading();
-            if (heading < 0) heading += 360; // normalize to 0–360
+            if (heading < 0) heading += 360;
             telemetry.addData("Heading", "%.1f°", heading);
 
-            // Optional detail mode
             if (detailMode) {
-                double D_in = 3.54;                  // REV 90 mm grip wheels
-                double ticksPerRev = 28.0 * 4.0;          // encoder ticks per revolution * gear ratio, ie: 28*4=112 ticks
+                double D_in = 3.54;
+                double ticksPerRev = 28.0 * 4.0;
                 double leftTicksPerSec = shooter.getLeftVelocity();
                 double rightTicksPerSec = shooter.getRightVelocity();
                 double avgTicksPerSec = (leftTicksPerSec + rightTicksPerSec) / 2.0;
@@ -105,7 +116,7 @@ public class TeleOp extends OpMode {
                 double circumferenceFt = Math.PI * D_in / 12.0;
                 double vWheelFtPerSec = circumferenceFt * (rpm / 60.0);
 
-                double k = 0.85;                     // slip/compression factor
+                double k = 0.85;
                 double vExitFtPerSec = k * vWheelFtPerSec;
 
                 telemetry.addData("Shooter (ft/s)", "Wheel=%.2f Exit=%.2f", vWheelFtPerSec, vExitFtPerSec);

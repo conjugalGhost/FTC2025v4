@@ -15,7 +15,7 @@ public class AutonRed extends AutonBase {
 
         // Movement before shooting
         driveForwardInches(72, 0.5);   // drive forward in inches
-        turnToHeading(-45);            // turn to heading
+        turnToHeading(45);            // turn to heading
         driveForwardInches(52, 0.5);   // drive forward in inches
 
         // Spin up shooter (70% power via helper)
@@ -28,7 +28,7 @@ public class AutonRed extends AutonBase {
         // Feed 9 artifacts (loop count matches code, comment said 6)
         for (int i = 0; i < 9; i++) {
             feedForwardStep();
-            sleep(500);
+            sleep(750);
             logShooterVelocity();
         }
 

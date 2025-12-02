@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.SubSystem;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class IMU {
     private final com.qualcomm.robotcore.hardware.IMU imu;
@@ -29,7 +30,9 @@ public class IMU {
 
     /** Returns the robot's yaw (heading) in degrees. */
     public double getHeading() {
-        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+        return AngleUnit.DEGREES.normalize(
+                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES)
+        );
     }
 
     /** Returns the robot's pitch in degrees. */
@@ -45,5 +48,13 @@ public class IMU {
     /** Resets the yaw so the current heading becomes 0°. */
     public void resetYaw() {
         imu.resetYaw();
+    }
+
+    /** Logs yaw/pitch/roll to telemetry (Option 1: pass Telemetry in). */
+    public void logTelemetry(Telemetry telemetry) {
+        telemetry.addData("Heading", getHeading());
+        telemetry.addData("Pitch", getPitch());
+        telemetry.addData("Roll", getRoll());
+        telemetry.update();
     }
 }
