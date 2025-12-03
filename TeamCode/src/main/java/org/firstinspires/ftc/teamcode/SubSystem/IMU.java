@@ -8,15 +8,24 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class IMU {
     private final com.qualcomm.robotcore.hardware.IMU imu;
 
-    public IMU(HardwareMap hardwareMap) {
+    public IMU(HardwareMap hardwareMap, String robotName) {
         // Get the IMU from the hardware map (BHI260AP inside Control Hub)
         imu = hardwareMap.get(com.qualcomm.robotcore.hardware.IMU.class, "imu");
 
-        // Define the orientation of the Hub on the robot
-        RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.UP;
-        RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+        // Decide orientation based on robot name
+        RevHubOrientationOnRobot.LogoFacingDirection logoDirection;
+        RevHubOrientationOnRobot.UsbFacingDirection usbDirection = RevHubOrientationOnRobot.UsbFacingDirection.LEFT;
+
+        if (robotName.equalsIgnoreCase("Bobcat")) {
+            // Bobcat: USB LEFT, Logo DOWN
+            logoDirection = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
+        } else if (robotName.equalsIgnoreCase("Caracal")) {
+            // Caracal: USB LEFT, Logo UP
+            logoDirection = RevHubOrientationOnRobot.LogoFacingDirection.UP;
+        } else {
+            // Default fallback
+            logoDirection = RevHubOrientationOnRobot.LogoFacingDirection.UP;
+        }
 
         RevHubOrientationOnRobot orientationOnRobot =
                 new RevHubOrientationOnRobot(logoDirection, usbDirection);
@@ -50,7 +59,7 @@ public class IMU {
         imu.resetYaw();
     }
 
-    /** Logs yaw/pitch/roll to telemetry (Option 1: pass Telemetry in). */
+    /** Logs yaw/pitch/roll to telemetry. */
     public void logTelemetry(Telemetry telemetry) {
         telemetry.addData("Heading", getHeading());
         telemetry.addData("Pitch", getPitch());
