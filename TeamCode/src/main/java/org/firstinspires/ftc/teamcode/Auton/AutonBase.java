@@ -18,7 +18,7 @@ public abstract class AutonBase extends LinearOpMode {
     protected boolean isRedAlliance = true; // override in child classes
 
     // Calibrated constant from field test
-    protected static final double TICKS_PER_INCH = 7.207;
+    protected static final double TICKS_PER_INCH = 7.207; // NOTE: adjust if wheel/gear ratio changes
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -40,142 +40,117 @@ public abstract class AutonBase extends LinearOpMode {
 
     protected abstract void runAuton();
 
-    // --- Drive helpers ---
-    protected void driveForwardInches(double inches, double power) {
-        int ticks = (int)(inches * TICKS_PER_INCH);
-
-        DcMotorEx fl = drive.getFrontLeft();
-        DcMotorEx fr = drive.getFrontRight();
-        DcMotorEx bl = drive.getBackLeft();
-        DcMotorEx br = drive.getBackRight();
-
-        fl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-        fr.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-        bl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-        br.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-
-        fl.setTargetPosition(ticks);
-        fr.setTargetPosition(ticks);
-        bl.setTargetPosition(ticks);
-        br.setTargetPosition(ticks);
-
-        fl.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        fr.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        bl.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        br.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-
-        drive.setDrivePower(power);
-
-        ElapsedTime timer = new ElapsedTime();
-        while (opModeIsActive() &&
-                (fl.isBusy() || fr.isBusy() || bl.isBusy() || br.isBusy()) &&
-                timer.seconds() < 5) {
-            if (detailMode) {
-                telemetry.addData("FL pos", fl.getCurrentPosition());
-                telemetry.addData("FR pos", fr.getCurrentPosition());
-                telemetry.addData("BL pos", bl.getCurrentPosition());
-                telemetry.addData("BR pos", br.getCurrentPosition());
-                telemetry.update();
-            }
-        }
-        drive.stop();
-    }
-
+    // --- Open-loop drive with heading hold ---
     protected void driveStraightWithHeading(double inches, double power, double targetHeading) {
-        int ticks = (int)(inches * TICKS_PER_INCH);
+        int targetTicks = (int)(inches * TICKS_PER_INCH);
 
         DcMotorEx fl = drive.getFrontLeft();
         DcMotorEx fr = drive.getFrontRight();
         DcMotorEx bl = drive.getBackLeft();
         DcMotorEx br = drive.getBackRight();
 
+        // Reset encoders
         fl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         fr.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         bl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         br.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
 
-        fl.setTargetPosition(ticks);
-        fr.setTargetPosition(ticks);
-        bl.setTargetPosition(ticks);
-        br.setTargetPosition(ticks);
+        // Run open-loop (no internal PID)
+        fl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        fr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        bl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        br.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
 
-        fl.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        fr.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        bl.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        br.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-
-        drive.setDrivePower(power);
+        double base = power; // NOTE: positive = forward, negative = reverse
+        double kP = 0.02;    // NOTE: heading correction gain
+        double biasCap = 0.35; // NOTE: max heading bias
+        double deadbandDeg = 2.0; // NOTE: heading tolerance
+        double minMag = 0.12; // NOTE: minimum motor power to prevent stall
+        double timeoutSec = 5.0; // NOTE: safety timeout
 
         ElapsedTime timer = new ElapsedTime();
-        while (opModeIsActive() &&
-                (fl.isBusy() || fr.isBusy() || bl.isBusy() || br.isBusy()) &&
-                timer.seconds() < 5) {
+
+        while (opModeIsActive() && timer.seconds() < timeoutSec) {
+            int avgTicks = (fl.getCurrentPosition() + fr.getCurrentPosition()
+                    + bl.getCurrentPosition() + br.getCurrentPosition()) / 4;
+
+            // Exit when distance reached
+            if (base > 0 && avgTicks >= targetTicks) break;
+            if (base < 0 && avgTicks <= -Math.abs(targetTicks)) break;
+
             double currentHeading = imu.getHeading();
-            double error = targetHeading - currentHeading;
-            error = (error + 540) % 360 - 180;
+            double err = targetHeading - currentHeading;
+            err = (err + 540) % 360 - 180;
 
-            double kP = 0.06;
-            double correction = error * kP;
-            if (Math.abs(correction) < 0.12) {
-                correction = Math.copySign(0.12, correction);
-            }
+            double bias = err * kP;
+            if (Math.abs(err) < deadbandDeg) bias = 0;
+            bias = Math.max(-biasCap, Math.min(biasCap, bias));
 
-            fl.setPower(power + correction);
-            bl.setPower(power + correction);
-            fr.setPower(power - correction);
-            br.setPower(power - correction);
+            double left  = base * (1.0 + bias);
+            double right = base * (1.0 - bias);
+
+            // Prevent unintended reversal
+            if (Math.abs(left)  < minMag) left  = Math.copySign(minMag, left);
+            if (Math.abs(right) < minMag) right = Math.copySign(minMag, right);
+
+            fl.setPower(left);
+            bl.setPower(left);
+            fr.setPower(right);
+            br.setPower(right);
 
             if (detailMode) {
+                telemetry.addData("AvgTicks", avgTicks);
+                telemetry.addData("TargetTicks", targetTicks);
                 telemetry.addData("Heading", currentHeading);
-                telemetry.addData("Error", error);
-                telemetry.addData("Correction", correction);
+                telemetry.addData("Error", err);
+                telemetry.addData("Bias", bias);
+                telemetry.addData("L/R", "%.2f / %.2f", left, right);
                 telemetry.update();
             }
         }
+
         drive.stop();
     }
 
     // --- Corrected turnToHeading ---
     protected void turnToHeading(double targetHeading) {
-        // Normalize target to [-180, 180]
         targetHeading = ((targetHeading + 540) % 360) - 180;
 
-        // Ensure open-loop control
         drive.setRunModeAll(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
 
-        final double kP = 0.05;
-        final double minPower = 0.18;
-        final double maxPower = 0.6;
-        final double onTargetError = 1.5;
-        final double settleTime = 0.15;
+        final double kP = 0.05;       // NOTE: turn gain
+        final double minPower = 0.18; // NOTE: minimum turning power
+        final double maxPower = 0.6;  // NOTE: maximum turning power
+        final double tolDeg = 1.5;    // NOTE: tolerance in degrees
+        final double settleHold = 0.12; // NOTE: hold time on target (s)
+        final double timeoutSec = 3.0;  // NOTE: turn timeout
 
-        ElapsedTime timer = new ElapsedTime();
-        ElapsedTime settleTimer = new ElapsedTime();
+        ElapsedTime t = new ElapsedTime();
+        ElapsedTime settle = new ElapsedTime();
         boolean settling = false;
 
-        while (opModeIsActive() && timer.seconds() < 3.0) {
+        while (opModeIsActive() && t.seconds() < timeoutSec) {
             double current = imu.getHeading();
             current = ((current + 540) % 360) - 180;
 
-            double error = targetHeading - current;
-            error = ((error + 540) % 360) - 180;
+            double err = targetHeading - current;
+            err = ((err + 540) % 360) - 180;
 
-            double turnPower = error * kP;
+            double cmd = err * kP;
 
-            if (Math.abs(turnPower) < minPower && Math.abs(error) > onTargetError) {
-                turnPower = Math.copySign(minPower, turnPower == 0 ? 1 : turnPower);
+            boolean insideTol = Math.abs(err) <= tolDeg;
+            if (!insideTol && Math.abs(cmd) < minPower) {
+                cmd = Math.copySign(minPower, cmd == 0 ? 1 : cmd);
             }
 
-            if (turnPower > maxPower) turnPower = maxPower;
-            if (turnPower < -maxPower) turnPower = -maxPower;
+            cmd = Math.max(-maxPower, Math.min(maxPower, cmd));
+            drive.turn(cmd);
 
-            drive.turn(turnPower);
-
-            if (Math.abs(error) <= onTargetError) {
+            if (insideTol) {
                 if (!settling) {
                     settling = true;
-                    settleTimer.reset();
-                } else if (settleTimer.seconds() >= settleTime) {
+                    settle.reset();
+                } else if (settle.seconds() >= settleHold) {
                     break;
                 }
             } else {
@@ -185,12 +160,20 @@ public abstract class AutonBase extends LinearOpMode {
             if (detailMode) {
                 telemetry.addData("Target", targetHeading);
                 telemetry.addData("Current", current);
-                telemetry.addData("Error", error);
-                telemetry.addData("TurnPower", turnPower);
+                telemetry.addData("Error", err);
+                telemetry.addData("TurnCmd", cmd);
                 telemetry.update();
             }
         }
+
         drive.stop();
+        sleep(80); // NOTE: small pause to damp motion
+    }
+
+    protected void driveStrafeWithHeading(double inches, double power, double targetHeading) {
+        // Similar to driveStraightWithHeading, but motor power pattern:
+        // FL = +power, FR = -power, BL = -power, BR = +power (for right strafe)
+        // Reverse signs for left strafe
     }
 
     // --- Subsystem helpers ---
