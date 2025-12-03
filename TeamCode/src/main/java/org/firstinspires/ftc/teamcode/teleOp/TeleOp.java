@@ -29,7 +29,7 @@ public class TeleOp extends OpMode {
         drive = new Drive(hardwareMap);
         shooter = new Shooter(hardwareMap);
         feeder = new Feeder(hardwareMap);
-        imu = new IMU(hardwareMap);
+        imu     = new IMU(hardwareMap, "Bobcat"); // change to "Caracal" for that robot (Make changes to Logger as well)
         feeder.resetEncoders();
     }
 

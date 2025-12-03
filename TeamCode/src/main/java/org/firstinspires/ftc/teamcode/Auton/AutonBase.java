@@ -23,7 +23,7 @@ public abstract class AutonBase extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         drive   = new Drive(hardwareMap);
-        imu     = new IMU(hardwareMap, "Bobcat"); // change to "Caracal" for that robot
+        imu     = new IMU(hardwareMap, "Bobcat"); // change to "Caracal" for that robot (make changes in Logger as well)
         shooter = new Shooter(hardwareMap);
         feeder  = new Feeder(hardwareMap);
 

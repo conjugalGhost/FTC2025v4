@@ -28,7 +28,7 @@ public class Logger extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         shooter = new Shooter(hardwareMap);
         drive   = new Drive(hardwareMap);
-        imu     = new IMU(hardwareMap);
+        imu     = new IMU(hardwareMap, "Bobcat"); // change to "Caracal" for that robot (make changes in AutonBase as well)
         feeder  = new Feeder(hardwareMap);
 
         // Grab first voltage sensor (usually Expansion Hub)

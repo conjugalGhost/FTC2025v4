@@ -12,15 +12,15 @@ public class AutonBlue extends AutonBase {
 
         // Step 1: Drive forward 72 inches, hold heading 0°
         driveStraightWithHeading(72, 0.5, 0);
-        sleep(100); // NOTE: settle pause
+        sleep(100); // settle pause
 
-        // Step 2: Turn to -45°
+        // Step 2: Turn to -45° (short path CCW)
         turnToHeading(-45);
-        sleep(100); // NOTE: settle pause
+        sleep(100); // settle pause
 
         // Step 3: Drive forward 52 inches, hold heading -45°
         driveStraightWithHeading(52, 0.5, -45);
-        sleep(100); // NOTE: settle pause
+        sleep(100); // settle pause
 
         // Step 4: Spin up shooter
         spinShooterForward();
@@ -40,11 +40,10 @@ public class AutonBlue extends AutonBase {
 
         // Step 6: Back up 12 inches, hold heading -45°
         driveStraightWithHeading(-12, -0.5, -45);
-        sleep(100); // NOTE: settle pause
+        sleep(100); // settle pause
 
         // Step 7: Strafe left 18 inches, hold heading -45°
-        // NOTE: requires driveStrafeWithHeading(...) implemented in AutonBase
         driveStrafeWithHeading(-18, 0.5, -45); // negative = left, positive = right
-        sleep(100); // NOTE: settle pause
+        sleep(100); // settle pause
     }
 }
