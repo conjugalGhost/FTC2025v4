@@ -75,9 +75,15 @@ public abstract class AutonBase extends LinearOpMode {
             int avgTicks = (fl.getCurrentPosition() + fr.getCurrentPosition()
                     + bl.getCurrentPosition() + br.getCurrentPosition()) / 4;
 
-            // Exit when distance reached
-            if (base > 0 && avgTicks >= targetTicks) break;
-            if (base < 0 && avgTicks <= -Math.abs(targetTicks)) break;
+            // ✅ Exit when distance reached
+            if (base > 0 && avgTicks >= targetTicks) {
+                xBrake(0.18, 120);   // short clamp to kill momentum
+                break;
+            }
+            if (base < 0 && avgTicks <= -Math.abs(targetTicks)) {
+                xBrake(0.18, 120);   // clamp for reverse motion too
+                break;
+            }
 
             // Normalize headings
             double currentHeading = imu.getHeading();
@@ -121,20 +127,18 @@ public abstract class AutonBase extends LinearOpMode {
 
     // --- Turn to heading with IMU (corrected) ---
     protected void turnToHeading(double targetHeading) {
+        // Normalize target to -180..+180
         targetHeading = ((targetHeading + 540) % 360) - 180;
 
         drive.setRunModeAll(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
 
-        final double kP = 0.04;
-        final double minPower = 0.12;
-        final double maxPower = 0.5;
+        final double kP = 0.018;
+        final double minPower = 0.06;
+        final double maxPower = 0.4;
         final double tolDeg = 2.0;
-        final double settleHold = 0.15;
-        final double timeoutSec = 2.5;
+        final double timeoutSec = 3.0;
 
         ElapsedTime t = new ElapsedTime();
-        ElapsedTime settle = new ElapsedTime();
-        boolean settling = false;
 
         while (opModeIsActive() && t.seconds() < timeoutSec) {
             double current = imu.getHeading();
@@ -145,6 +149,7 @@ public abstract class AutonBase extends LinearOpMode {
 
             double cmd = err * kP;
 
+            // Apply minimum power if outside tolerance
             if (Math.abs(cmd) < minPower && Math.abs(err) > tolDeg) {
                 cmd = Math.copySign(minPower, err);
             }
@@ -152,16 +157,10 @@ public abstract class AutonBase extends LinearOpMode {
 
             drive.turn(cmd);
 
-            boolean insideTol = Math.abs(err) <= tolDeg;
-            if (insideTol) {
-                if (!settling) {
-                    settling = true;
-                    settle.reset();
-                } else if (settle.seconds() >= settleHold) {
-                    break;
-                }
-            } else {
-                settling = false;
+            // Immediate exit once inside tolerance
+            if (Math.abs(err) <= tolDeg) {
+                xBrake(0.18, 120); // short clamp to kill momentum
+                break;
             }
 
             if (detailMode) {
@@ -174,12 +173,12 @@ public abstract class AutonBase extends LinearOpMode {
         }
 
         drive.stop();
-        sleep(100); // settle pause
+        sleep(100);
     }
 
     // --- Strafe with heading hold (corrected) ---
     protected void driveStrafeWithHeading(double inches, double power, double targetHeading) {
-        int targetTicks = (int)(Math.abs(inches) * TICKS_PER_INCH);
+        int targetTicks = (int)(inches * TICKS_PER_INCH);
 
         DcMotorEx fl = drive.getFrontLeft();
         DcMotorEx fr = drive.getFrontRight();
@@ -202,19 +201,25 @@ public abstract class AutonBase extends LinearOpMode {
         double base = power;          // positive = strafe right, negative = strafe left
         final double kP = 0.015;      // heading correction gain
         final double biasCap = 0.25;  // max heading bias
-        final double deadbandDeg = 2.0; // tolerance in degrees
-        final double minMag = 0.10;   // minimum motor power
-        final double timeoutSec = 5.0; // safety timeout
+        final double deadbandDeg = 2.0;
+        final double minMag = 0.10;
+        final double timeoutSec = 5.0;
 
         ElapsedTime timer = new ElapsedTime();
 
         while (opModeIsActive() && timer.seconds() < timeoutSec) {
-            // Average absolute ticks for strafing distance
-            int avgTicks = (Math.abs(fl.getCurrentPosition()) + Math.abs(fr.getCurrentPosition())
-                    + Math.abs(bl.getCurrentPosition()) + Math.abs(br.getCurrentPosition())) / 4;
+            int avgTicks = (fl.getCurrentPosition() - fr.getCurrentPosition()
+                    + bl.getCurrentPosition() - br.getCurrentPosition()) / 4;
 
-            // Exit when distance reached
-            if (avgTicks >= targetTicks) break;
+            // ✅ Exit when distance reached
+            if (base > 0 && avgTicks >= targetTicks) {
+                xBrake(0.18, 120);   // clamp sideways drift
+                break;
+            }
+            if (base < 0 && avgTicks <= -Math.abs(targetTicks)) {
+                xBrake(0.18, 120);   // clamp for left strafe
+                break;
+            }
 
             // Normalize headings
             double currentHeading = imu.getHeading();
@@ -229,7 +234,7 @@ public abstract class AutonBase extends LinearOpMode {
             double bias = (Math.abs(err) < deadbandDeg) ? 0 : err * kP;
             bias = Math.max(-biasCap, Math.min(biasCap, bias));
 
-            // Mecanum strafe pattern with bias
+            // Apply bias to strafe powers
             double flPower = base * (1.0 + bias);
             double frPower = -base * (1.0 - bias);
             double blPower = -base * (1.0 + bias);
@@ -252,7 +257,6 @@ public abstract class AutonBase extends LinearOpMode {
                 telemetry.addData("Heading", currentHeading);
                 telemetry.addData("Error", err);
                 telemetry.addData("Bias", bias);
-                telemetry.addData("FL/FR/BL/BR", "%.2f / %.2f / %.2f / %.2f", flPower, frPower, blPower, brPower);
                 telemetry.update();
             }
         }
@@ -270,6 +274,20 @@ public abstract class AutonBase extends LinearOpMode {
     protected void feedForwardStep() { feeder.advanceOneStep(); }
     protected void feedReverseStep() { feeder.reverseOneStep(); }
     protected void stopFeeder() { feeder.stop(); }
+    protected void xBrake(double mag, long ms) {
+        DcMotorEx fl = drive.getFrontLeft();
+        DcMotorEx fr = drive.getFrontRight();
+        DcMotorEx bl = drive.getBackLeft();
+        DcMotorEx br = drive.getBackRight();
+
+        fl.setPower(+mag);
+        fr.setPower(-mag);
+        bl.setPower(-mag);
+        br.setPower(+mag);
+
+        sleep(ms);
+        drive.stop();
+    }
 
     protected void logShooterVelocity() {
         telemetry.addData("Shooter Left Vel", shooter.getLeftVelocity());
