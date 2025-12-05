@@ -23,7 +23,7 @@ public abstract class AutonBase extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         drive   = new Drive(hardwareMap);
-        imu     = new IMU(hardwareMap, "Bobcat"); // change to "Caracal" for that robot (make changes in Logger as well)
+        imu     = new IMU(hardwareMap, "Caracal"); // change to "Caracal" for that robot (make changes in Logger as well)
         shooter = new Shooter(hardwareMap);
         feeder  = new Feeder(hardwareMap);
 
@@ -75,7 +75,7 @@ public abstract class AutonBase extends LinearOpMode {
             int avgTicks = (fl.getCurrentPosition() + fr.getCurrentPosition()
                     + bl.getCurrentPosition() + br.getCurrentPosition()) / 4;
 
-            // ✅ Exit when distance reached
+            // Exit loop when distance reached
             if (base > 0 && avgTicks >= targetTicks) {
                 xBrake(0.18, 120);   // short clamp to kill momentum
                 break;
@@ -157,7 +157,7 @@ public abstract class AutonBase extends LinearOpMode {
 
             drive.turn(cmd);
 
-            // Immediate exit once inside tolerance
+            // Immediate exit loop once inside tolerance
             if (Math.abs(err) <= tolDeg) {
                 xBrake(0.18, 120); // short clamp to kill momentum
                 break;
@@ -211,7 +211,7 @@ public abstract class AutonBase extends LinearOpMode {
             int avgTicks = (fl.getCurrentPosition() - fr.getCurrentPosition()
                     + bl.getCurrentPosition() - br.getCurrentPosition()) / 4;
 
-            // ✅ Exit when distance reached
+            // Exit loop when distance reached
             if (base > 0 && avgTicks >= targetTicks) {
                 xBrake(0.18, 120);   // clamp sideways drift
                 break;
