@@ -16,34 +16,36 @@ public class AutonBlue extends AutonBase {
 
         // Step 2: Turn to -45° (short path CCW)
         turnToHeading(-45);
-        sleep(100); // settle pause
+        xBrake(0.18, 120);   // clamp momentum to prevent overshoot
+        sleep(150);          // longer settle pause
+        imu.logTelemetry(telemetry); // log IMU heading after turn
 
         // Step 3: Drive forward 52 inches, hold heading -45°
         driveStraightWithHeading(52, 0.5, -45);
         sleep(100); // settle pause
 
-        // Step 4: Spin up shooter
-        spinShooterForward();
-        sleep(500);
-
-        logShooterVelocity();
-
-        // Step 5: Feed 9 artifacts
-        for (int i = 0; i < 9; i++) {
-            feedForwardStep();
-            sleep(500);
-            logShooterVelocity();
-        }
-
-        stopShooter();
-        stopFeeder();
-
-        // Step 6: Back up 12 inches, hold heading -45°
+        // Step 4: Back up 12 inches, hold heading -45°
         driveStraightWithHeading(-12, -0.5, -45);
         sleep(100); // settle pause
 
-        // Step 7: Strafe left 18 inches, hold heading -45°
+        // Step 5: Strafe left 18 inches, hold heading -45°
         driveStrafeWithHeading(-18, 0.5, -45); // negative = left, positive = right
         sleep(100); // settle pause
+
+        // Step 6: Shooter sequence
+        spinShooterForward();
+        sleep(500); // spin-up delay
+        logShooterVelocity();
+
+        // Feed 9 artifacts
+        for (int i = 0; i < 9; i++) {
+            feedForwardStep();
+            sleep(750); // match Red’s feed timing
+            logShooterVelocity();
+        }
+
+        // Stop shooter and feeder
+        stopShooter();
+        stopFeeder();
     }
 }
