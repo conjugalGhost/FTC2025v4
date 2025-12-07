@@ -1,3 +1,4 @@
 git diff --cached
 git commit -am "Fix encoder averaging logic and add telemetry in AutonBase"git commit -am "Fix encoder averaging logic and add telemetry in AutonBase"
 git push origin main
+git log --oneline -n 5
