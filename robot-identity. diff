@@ -1,2 +1,5 @@
 git apply robot-identity.diff
 git status
+
+git add TeamCode/src/main/java/org/firstinspires/ftc/teamcode/util/RobotIdentity.java
+git add TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Auton/AutonBase.java
