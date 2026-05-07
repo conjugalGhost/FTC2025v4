@@ -1,71 +1,97 @@
 package org.firstinspires.ftc.teamcode.SubSystem;
 
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
+/**
+ * Subsystem for the Robot Shooter (Flywheel Launcher).
+ * Optimized for a single REV HD Hex motor setup.
+ */
 public class Shooter {
-    private DcMotorEx leftShooter;
-    private DcMotorEx rightShooter;
+    private DcMotorEx shooter;
+    
+    private double targetVelocityTicksPerSec = 0;
     private double targetPower = 0;
 
-    // Constants for REV HD Hex direct drive with 90mm wheels
-    private static final double TICKS_PER_REV = 28.0;       // encoder CPR
-    private static final double WHEEL_DIAMETER_MM = 90.0;   // shooter wheel
-    private static final double WHEEL_DIAMETER_IN = WHEEL_DIAMETER_MM / 25.4;
+    // Constants for REV HD Hex motors (28 CPR) at 4x quadrature = 112 ticks/rev
+    private static final double TICKS_PER_REV = 112.0;
+    private static final double WHEEL_DIAMETER_IN = 3.54;   // ~90mm
     private static final double WHEEL_CIRCUMFERENCE_FT = Math.PI * WHEEL_DIAMETER_IN / 12.0;
-    private static final double SLIP_FACTOR = 0.85;         // compression/slip
+    private static final double SLIP_FACTOR = 0.85;         // Compression/slip factor for exit velocity
 
     public Shooter(HardwareMap hardwareMap) {
-        leftShooter  = hardwareMap.get(DcMotorEx.class, "leftShooter");
-        rightShooter = hardwareMap.get(DcMotorEx.class, "rightShooter");
+        // Try to find the motor under the name "shooter"
+        shooter = hardwareMap.get(DcMotorEx.class, "shooter");
 
-        if (leftShooter != null) {
-            leftShooter.setDirection(DcMotorEx.Direction.REVERSE);
+        if (shooter != null) {
+            shooter.setDirection(DcMotorEx.Direction.REVERSE);
+            shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+            shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
-        if (rightShooter != null) {
-            rightShooter.setDirection(DcMotorEx.Direction.FORWARD);
+    }
+
+    /** Set shooter velocity in ticks per second (closed-loop) */
+    public void setVelocity(double ticksPerSec) {
+        targetVelocityTicksPerSec = ticksPerSec;
+        targetPower = 0;
+        if (shooter != null) {
+            shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            shooter.setVelocity(targetVelocityTicksPerSec);
         }
+    }
+
+    /** Set shooter velocity in RPM */
+    public void setTargetRPM(double rpm) {
+        double ticksPerSec = (rpm / 60.0) * TICKS_PER_REV;
+        setVelocity(ticksPerSec);
     }
 
     /** Set shooter power (open-loop, 0.0–1.0) */
     public void setPower(double power) {
         targetPower = power;
-        if (leftShooter != null) leftShooter.setPower(targetPower);
-        if (rightShooter != null) rightShooter.setPower(targetPower);
+        targetVelocityTicksPerSec = 0; 
+        if (shooter != null) {
+            shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            shooter.setPower(targetPower);
+        }
     }
 
-    /** Convenience wrappers for preset shooter power (70% forward/reverse) */
+    /** Presets for shooter speed */
     public void shootForward() {
-        setPower(0.7);   // 70% forward
+        setTargetRPM(2400); // Target RPM for scoring
     }
 
     public void shootReverse() {
-        setPower(-0.7);  // 70% reverse
+        setTargetRPM(-1000); // Reverse for clearing jams
     }
 
     public void stop() {
+        targetVelocityTicksPerSec = 0;
         targetPower = 0;
-        if (leftShooter != null) leftShooter.setPower(0);
-        if (rightShooter != null) rightShooter.setPower(0);
+        if (shooter != null) shooter.setPower(0);
     }
 
     /** Accessors */
-    public double getLeftVelocity() { return leftShooter != null ? leftShooter.getVelocity() : 0; }
-    public double getRightVelocity() { return rightShooter != null ? rightShooter.getVelocity() : 0; }
-
-    /** Return the last commanded shooter power */
-    public double getTargetPower() {
-        return targetPower;
+    public double getVelocity() { 
+        return shooter != null ? shooter.getVelocity() : 0; 
     }
-
-    /** Derived physics values */
-    public double getAverageVelocityTicks() {
-        return (getLeftVelocity() + getRightVelocity()) / 2.0;
-    }
+    
+    /** Compatibility methods for existing TeleOp and Logger code */
+    public double getLeftVelocity() { return getVelocity(); }
+    public double getRightVelocity() { return getVelocity(); }
 
     public double getRPM() {
-        return (getAverageVelocityTicks() / TICKS_PER_REV) * 60.0;
+        return (getVelocity() / TICKS_PER_REV) * 60.0;
+    }
+
+    public double getTargetRPM() {
+        return (targetVelocityTicksPerSec / TICKS_PER_REV) * 60.0;
+    }
+    
+    public double getTargetPower() {
+        return targetPower;
     }
 
     public double getExitVelocityFtPerSec() {
@@ -74,12 +100,21 @@ public class Shooter {
         return surfaceSpeed * SLIP_FACTOR;
     }
 
+    public boolean isAtTargetVelocity() {
+        if (targetVelocityTicksPerSec == 0) return false;
+        double error = Math.abs(targetVelocityTicksPerSec - getVelocity());
+        return error < (TICKS_PER_REV * 2); // 2 revs/sec tolerance
+    }
+
     /** Telemetry */
     public void updateTelemetry(Telemetry telemetry) {
-        telemetry.addData("Target Power", targetPower);
-        telemetry.addData("Left Vel (ticks/sec)", getLeftVelocity());
-        telemetry.addData("Right Vel (ticks/sec)", getRightVelocity());
-        telemetry.addData("Shooter RPM", "%.0f", getRPM());
+        telemetry.addLine("=== SHOOTER (SINGLE MOTOR) ===");
+        telemetry.addData("Target RPM", "%.0f", getTargetRPM());
+        telemetry.addData("Current RPM", "%.0f", getRPM());
+        telemetry.addData("At Target", isAtTargetVelocity());
         telemetry.addData("Exit Velocity (ft/s)", "%.1f", getExitVelocityFtPerSec());
+        if (shooter == null) {
+            telemetry.addLine("WARNING: Shooter motor 'shooter' not found!");
+        }
     }
 }
