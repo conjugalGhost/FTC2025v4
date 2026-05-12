@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.SubSystem;
 
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Drive {
@@ -16,14 +17,25 @@ public class Drive {
             backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
             backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
-            // Normalize directions so +power = forward
+            // Flipping all motor directions to fix the inverse movement issue
             frontLeft.setDirection(DcMotorEx.Direction.FORWARD);
             backLeft.setDirection(DcMotorEx.Direction.FORWARD);
             frontRight.setDirection(DcMotorEx.Direction.REVERSE);
             backRight.setDirection(DcMotorEx.Direction.REVERSE);
+
+            // Ensure motors are in a mode that responds to setPower() immediately
+            setRunModeAll(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+            setZeroPowerBehaviorAll(DcMotorEx.ZeroPowerBehavior.BRAKE);
         } catch (Exception e) {
             // Handle missing motors gracefully
         }
+    }
+
+    public void setZeroPowerBehaviorAll(DcMotorEx.ZeroPowerBehavior behavior) {
+        if (frontLeft != null) frontLeft.setZeroPowerBehavior(behavior);
+        if (frontRight != null) frontRight.setZeroPowerBehavior(behavior);
+        if (backLeft != null) backLeft.setZeroPowerBehavior(behavior);
+        if (backRight != null) backRight.setZeroPowerBehavior(behavior);
     }
 
     // --- Core helpers ---
