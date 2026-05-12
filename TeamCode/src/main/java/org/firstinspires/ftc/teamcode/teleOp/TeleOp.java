@@ -97,6 +97,10 @@ public class TeleOp extends OpMode {
                 telemetry.addData("IMU", "Not Responding");
             }
         }
+        
+        if (shooter != null) {
+            shooter.updateTelemetry(telemetry);
+        }
 
         telemetry.update();
     }

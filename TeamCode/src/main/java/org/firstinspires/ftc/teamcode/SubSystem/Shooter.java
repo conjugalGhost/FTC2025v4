@@ -15,8 +15,12 @@ public class Shooter {
     private double targetVelocityTicksPerSec = 0;
     private double targetPower = 0;
 
-    // Constants for REV HD Hex motors (28 CPR) at 4x quadrature = 112 ticks/rev
-    private static final double TICKS_PER_REV = 112.0;
+    // Constants for REV HD Hex motors
+    // Shaft: 28 ticks/rev. 
+    // If it has a 40:1 gearbox: 1120 ticks/rev
+    // If it has a 20:1 gearbox: 560 ticks/rev
+    // We will use 28 for "at the motor" but if it feels slow, check the gearbox.
+    private static final double TICKS_PER_REV = 28.0; 
     private static final double WHEEL_DIAMETER_IN = 3.54;   // ~90mm
     private static final double WHEEL_CIRCUMFERENCE_FT = Math.PI * WHEEL_DIAMETER_IN / 12.0;
     private static final double SLIP_FACTOR = 0.85;         // Compression/slip factor for exit velocity
@@ -26,9 +30,10 @@ public class Shooter {
         shooter = hardwareMap.get(DcMotorEx.class, "shooter");
 
         if (shooter != null) {
-            shooter.setDirection(DcMotorEx.Direction.REVERSE);
+            shooter.setDirection(DcMotorEx.Direction.FORWARD);
             shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            // Switch to RUN_WITHOUT_ENCODER to ensure no internal velocity limits apply
+            shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         }
     }
 
@@ -60,11 +65,11 @@ public class Shooter {
 
     /** Presets for shooter speed */
     public void shootForward() {
-        setTargetRPM(2400); // Target RPM for scoring
+        setPower(1.0); // Use full power to bypass speed limiters
     }
 
     public void shootReverse() {
-        setTargetRPM(-1000); // Reverse for clearing jams
+        setPower(-0.5); // Reverse for clearing jams
     }
 
     public void stop() {

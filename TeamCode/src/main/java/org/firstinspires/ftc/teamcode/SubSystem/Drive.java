@@ -17,10 +17,10 @@ public class Drive {
             backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
             backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
-            // Flipping all motor directions to fix the inverse movement issue
-            frontLeft.setDirection(DcMotorEx.Direction.FORWARD);
+            // Specifically flipping front motors to match the back motors
+            frontLeft.setDirection(DcMotorEx.Direction.REVERSE);
             backLeft.setDirection(DcMotorEx.Direction.FORWARD);
-            frontRight.setDirection(DcMotorEx.Direction.REVERSE);
+            frontRight.setDirection(DcMotorEx.Direction.FORWARD);
             backRight.setDirection(DcMotorEx.Direction.REVERSE);
 
             // Ensure motors are in a mode that responds to setPower() immediately
