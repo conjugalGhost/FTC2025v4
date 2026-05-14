@@ -10,6 +10,13 @@ public class Drive {
     private DcMotorEx backLeft;
     private DcMotorEx backRight;
 
+    // --- Trim Factors to balance motor performance ---
+    // Decrease these (e.g., 0.95) for motors that are "too fast"
+    private double trimFL = 1.0;
+    private double trimFR = 1.0;
+    private double trimBL = 1.0;
+    private double trimBR = 1.0; // backRight is reported slow, others might need reduction
+
     public Drive(HardwareMap hardwareMap) {
         try {
             frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
@@ -31,6 +38,13 @@ public class Drive {
         }
     }
 
+    public void setTrim(double fl, double fr, double bl, double br) {
+        this.trimFL = fl;
+        this.trimFR = fr;
+        this.trimBL = bl;
+        this.trimBR = br;
+    }
+
     public void setZeroPowerBehaviorAll(DcMotorEx.ZeroPowerBehavior behavior) {
         if (frontLeft != null) frontLeft.setZeroPowerBehavior(behavior);
         if (frontRight != null) frontRight.setZeroPowerBehavior(behavior);
@@ -38,29 +52,27 @@ public class Drive {
         if (backRight != null) backRight.setZeroPowerBehavior(behavior);
     }
 
-    // --- Core helpers ---
+    // --- Core helpers with Trim applied ---
+
+    public void setMotorPowers(double flP, double frP, double blP, double brP) {
+        if (frontLeft != null)  frontLeft.setPower(flP * trimFL);
+        if (frontRight != null) frontRight.setPower(frP * trimFR);
+        if (backLeft != null)   backLeft.setPower(blP * trimBL);
+        if (backRight != null)  backRight.setPower(brP * trimBR);
+    }
 
     public void setDrivePower(double power) {
-        if (frontLeft != null) frontLeft.setPower(power);
-        if (backLeft != null) backLeft.setPower(power);
-        if (frontRight != null) frontRight.setPower(power);
-        if (backRight != null) backRight.setPower(power);
+        setMotorPowers(power, power, power, power);
     }
 
     public void stop() {
-        if (frontLeft != null) frontLeft.setPower(0.0);
-        if (backLeft != null) backLeft.setPower(0.0);
-        if (frontRight != null) frontRight.setPower(0.0);
-        if (backRight != null) backRight.setPower(0.0);
+        setMotorPowers(0, 0, 0, 0);
     }
 
-    // --- Corrected turn method ---
+    // --- Corrected turn method with trim ---
     public void turn(double power) {
         // Positive power = clockwise turn
-        if (frontLeft != null) frontLeft.setPower(power);
-        if (backLeft != null) backLeft.setPower(power);
-        if (frontRight != null) frontRight.setPower(-power);
-        if (backRight != null) backRight.setPower(-power);
+        setMotorPowers(power, -power, power, -power);
     }
 
     // --- Accessors for AutonBase ---

@@ -24,6 +24,10 @@ public class TeleOp extends OpMode {
     @Override
     public void init() {
         drive = new Drive(hardwareMap);
+        // Applying trim: backRight is slow, so we reduce the others to match it
+        // Adjust these numbers (e.g., 0.90) until the robot drives straight
+        drive.setTrim(0.95, 0.95, 0.95, 1.0); 
+
         shooter = new Shooter(hardwareMap);
         feeder = new Feeder(hardwareMap);
         try {
@@ -50,10 +54,7 @@ public class TeleOp extends OpMode {
                 Math.max(Math.abs(backLeftPower),
                         Math.max(Math.abs(frontRightPower), Math.abs(backRightPower)))));
 
-        if (drive.getFrontLeft()  != null) drive.getFrontLeft().setPower(frontLeftPower / max);
-        if (drive.getBackLeft()   != null) drive.getBackLeft().setPower(backLeftPower / max);
-        if (drive.getFrontRight() != null) drive.getFrontRight().setPower(frontRightPower / max);
-        if (drive.getBackRight()  != null) drive.getBackRight().setPower(backRightPower / max);
+        if (drive.getFrontLeft()  != null) drive.setMotorPowers(frontLeftPower / max, frontRightPower / max, backLeftPower / max, backRightPower / max);
 
         // --- Shooter control (Gamepad 2) ---
         if (gamepad2.right_trigger > 0.1) {
